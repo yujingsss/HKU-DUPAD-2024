@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.ico" />
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0" />
+  <title>HKU DUPAD 2024 Degree Show</title>
+</head>
+
+<body>
+  <div id="loader">
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+    <div class="panel"></div>
+  </div>
+
+  <div class="icon noselect layertop customCursor"></div>
+  <div class="logo noselect layertop customCursor" onclick="location.reload()">
+    <img src="./DUPAD_logo.png" alt="DUPAD logo" />
+  </div>
+
+  <div id="blocker" class="noselect layersecond">
+    <div id="instructions" class="customCursor">
+      <h2 id="enter">Department of Urabn Planing and Design 2024 Degree Show</h2>
+    </div>
+  </div>
+
+  <div id="projectDiv" class="noselect layerfourth"></div>
+  <div class="image-viewer layertop"></div>
+
+  <div class="view noselect layersecond">
+    <li id="about" class="customCursor highlight">About</li>
+    <li id="allWorks" class="customCursor highlight">All Works</li>
+    <li id="exhibitionHall" class="customCursor highlight">Exhibition</li>
+  </div>
+
+  <div id="about-page" class="layersecond noselect"></div>
+
+  <div id="listOfWorks" class="layertop noselect highlight customCursor">List of Works</div>
+  <div id="works-list" class="noselect layersecond"></div>
+
+  <div id="projectDetail" class="noselect layerthird"></div>
+
+  <div id="root"></div>
+
+  <div class="gradient">
+    <svg xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
+          <feBlend in="SourceGraphic" in2="goo" />
+        </filter>
+      </defs>
+    </svg>
+    <div class="gradient-container">
+      <div class="g1"></div>
+      <div class="g2"></div>
+      <div class="g3"></div>
+      <div class="g4"></div>
+      <div class="g5"></div>
+      <div class="interactive"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>
