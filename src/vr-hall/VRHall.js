@@ -822,8 +822,6 @@ export class VRHall {
             this._camLookAtExhibition(this._projectGr[refIndex].position, this._projectGr[refIndex].rotation, this._projectGr[refIndex]);
         } else {
             if (this._controls) {
-                // this._controls.reset(true);
-                // this._controls.moveTo(this._options.initialPos.x, this._options.initialPos.y, this._options.initialPos.z, true);
                 this._controls.setLookAt(
                     this._options.initialPos.x, this._options.initialPos.y, this._options.initialPos.z + 1, 
                     this._options.initialPos.x, this._options.initialPos.y, this._options.initialPos.z, 
