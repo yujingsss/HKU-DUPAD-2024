@@ -450,7 +450,45 @@ export class VRHall {
         const raycaster = this._raycaster;
         const pointer = new THREE.Vector2();
         //show project detail left bottom corner
+        let prevPointerX, prevPointerY = 0;
         this._options.container.addEventListener('pointermove', event => {
+
+            // const pointer = new THREE.Vector2();
+            // pointer.x = - (event.clientX - (this._size.width) / 2) / (this._size.width/2);
+            // // pointer.y = - (event.clientY - (this._size.height) / 2) / (this._size.height/2);
+            // pointer.y = 1 - (event.clientY / this._size.height);
+            // console.log(pointer);
+
+            // if (pointer.x - prevPointerX > 0){
+
+            // } else {
+
+            // }
+            // if (pointer.y - prevPointerY > 0) {
+
+            // } else {
+
+            // }
+
+            // prevPointerX = pointer.x;
+            // prevPointerY = pointer.y;
+
+            // const fromPosition = new THREE.Vector3();
+            // const fromLookAt = new THREE.Vector3();
+            // this._controls.getPosition(fromPosition);
+            // this._controls.getTarget(fromLookAt);
+            // // console.log(fromPosition);
+            // console.log(this._camera);
+            // // const lookatV32 = new THREE.Vector3(position.x, position.y, position.z);
+            // // lookatV32.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
+            // if (pointer.x )
+            // this._controls.setLookAt(
+            //     -38 + pointer.x * 0.8, 2.2 - pointer.y * 0.5, 17,
+            //     -38, 2.2, 16,
+            //     true
+            // );
+            
+
 
             const startxy = new THREE.Vector2();
             startxy.x =  event.clientX;
@@ -515,13 +553,13 @@ export class VRHall {
         const lookatV3 = new THREE.Vector3(position.x, position.y, position.z);
         lookatV3.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
 
-        const fromPosition = new THREE.Vector3();
-        const fromLookAt = new THREE.Vector3();
-        this._controls.getPosition(fromPosition);
-        this._controls.getTarget(fromLookAt);
+        // const fromPosition = new THREE.Vector3();
+        // const fromLookAt = new THREE.Vector3();
+        // this._controls.getPosition(fromPosition);
+        // this._controls.getTarget(fromLookAt);
 
-        const lookatV32 = new THREE.Vector3(position.x, position.y, position.z);
-        lookatV32.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
+        // const lookatV32 = new THREE.Vector3(position.x, position.y, position.z);
+        // lookatV32.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
         
         this._controls.setLookAt(
             position.x,
