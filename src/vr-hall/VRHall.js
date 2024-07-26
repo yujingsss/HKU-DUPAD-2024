@@ -75,7 +75,7 @@ export class VRHall {
         this._scene = new THREE.Scene();
 
         //add camera
-        this._camera = new THREE.PerspectiveCamera(40, clientWidth / clientHeight, 0.1, 1000);
+        this._camera = new THREE.PerspectiveCamera(50, clientWidth / clientHeight, 0.1, 1000);
         const cameraPos = this._options.cameraPosition;
         if (window.innerWidth / window.innerHeight > 1){
             this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + this._EPS);
@@ -89,24 +89,36 @@ export class VRHall {
         // render
         // this._renderer.render(this._scene, this._camera);
 
+
+        let controllerRotSpeed;
+        if (window.innerWidth / window.innerHeight > 1){
+            controllerRotSpeed = 0.3;
+        } else if (window.innerWidth / window.innerHeight <= 1) {
+            controllerRotSpeed = -0.3;
+        }
         //controller
         this._controls = new CameraControls(this._camera, this._renderer.domElement);
         this._controls.maxDistance = this._EPS;
         // this._controls.maxDistance = this._options.controlMaxD;
         // this._controls.minDistance = this._options.controlMinD;
-        this._controls.distance = 1;
+        this._controls.distance = 2;
         this._controls.dollySpeed = 0.3;
-        this._controls.azimuthRotateSpeed = -0.3;
-        this._controls.polarRotateSpeed = 0.3;
+        this._controls.azimuthRotateSpeed = controllerRotSpeed;
+        this._controls.polarRotateSpeed = controllerRotSpeed;
         this._controls.dollyToCursor = true;
         this._controls.dragToOffset = false;
-        this._controls.smoothTime = 2;
+        this._controls.smoothTime = 1.6;
         this._controls.draggingSmoothTime = 0.01;
-        this._controls.maxPolarAngle = Math.PI;
-        // this._controls.minPolarAngle = 0;
+        this._controls.maxPolarAngle = Math.PI * 0.7;
+        this._controls.minPolarAngle = Math.PI / 2;
+        this._controls.maxAzimuthAngle = Math.PI * 0.3;
+        this._controls.minAzimuthAngle = - Math.PI * 0.3;
         this._controls.truckSpeed = 1;
-        this._controls.mouseButtons.wheel = CameraControls.ACTION.NONE;
-        this._controls.mouseButtons.middle = CameraControls.ACTION.TRUCK;
+        this._controls.mouseButtons.wheel = CameraControls.ACTION.ZOOM;
+        this._controls.touches.two = CameraControls.ACTION.NONE;
+        this._controls.touches.three = CameraControls.ACTION.NONE;
+        this._controls.maxZoom = 5;
+        this._controls.minZoom = 2;
         this._controls.saveState();
         this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
 
@@ -804,9 +816,9 @@ export class VRHall {
             }
         }
 
-        this._scene.add(this._floor);
-        this._scene.add(this._hallMesh);
         if (focusProject){
+            this._controls.maxPolarAngle = Math.PI * 0.7;
+            this._controls.minPolarAngle = Math.PI / 2;
             this._camLookAtExhibition(this._projectGr[refIndex].position, this._projectGr[refIndex].rotation, this._projectGr[refIndex]);
         } else {
             if (this._controls) {
@@ -820,6 +832,8 @@ export class VRHall {
                 // this._controls.rotateAzimuthTo(Math.PI / 6, true);
             }
         }
+        this._scene.add(this._floor);
+        this._scene.add(this._hallMesh);
         // console.log(this._newPos, this._projectGr);
     }
 
@@ -849,12 +863,16 @@ export class VRHall {
             this._eventMeshes.push(eachProj);
         });
         if (this._controls) {
+            // this._controls.reset(true);
+            // this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
             if (window.innerWidth / window.innerHeight > 1) {
                 this._camera.position.set(this._options.cameraPosition.x, this._options.cameraPosition.y, this._options.cameraPosition.z);
             } else if (window.innerWidth / window.innerHeight <= 1) {
                 this._camera.position.set(this._options.cameraPosition.x, this._options.cameraPosition.y, this._options.cameraPosition.z + 12);
             }
             this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
+            this._controls.maxPolarAngle = Math.PI;
+            this._controls.minPolarAngle = 0;
         }
     }
 
@@ -933,7 +951,7 @@ export class VRHall {
                     height = (841 / 1190) * width;
                 }
                 material.map = null;
-                material.color.set(0xededed);
+                material.color.set(0xfafafa);
             }
             const geometry = new THREE.BoxGeometry(width, height, this._options.depth);
             const plane = new THREE.Mesh(geometry, material);
