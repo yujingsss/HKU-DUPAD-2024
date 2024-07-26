@@ -128,20 +128,24 @@ function callback(element){
 async function main() {
   const vr = new VRHall({
     debugger: false,
-    modelloaded: false,
-    camMoveFollowState: true,
     lightStrength: 1,
-    maxSize: 4,
-    depth: 0.03,
-    cameraHeight: 2.2,
-    floorY: -10,
-    floorName: "GridHelper",
-    cameraPosition: { x: 0, y: 0, z: 18 },
+    dirLightStrength: 5,
+    maxSize: 3.7,
+    depth: 0.01,
+    cameraHeight: 2,
+    floorY: 0,
+    floorName: "floor",
+    cameraPosition: { x: 0, y: 0, z: 0 },
     cameraRotation: { x: 0, y: 0, z: 0 },
-    controlMaxD: 10,
+    cameraOffZ : 53,
+    initialPos: {x: -38, y: 2, z: 16},
+    controlMaxD: 1,
     controlMinD: 1,
-    projectDistance: 5,
-    layerProjectNum: 8,
+    projectDistance: 10,
+    layerProjectNum: 12,
+    layoutXDistanceScl: 0.45,
+    layoutYDistanceScl: 0.8,
+    hallScl: 3,
     container: document.getElementById("root"),
   });
 
@@ -158,7 +162,16 @@ async function main() {
   //load gallery model
   await vr.loadHall({
     url: "./exhibition-frame",
-    position: { x: 0, y: -10, z: 0 },
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: 3,
+    onprogress: (p) => {
+      console.log(p);
+    },
+  });
+  await vr.loadModel({
+    url: "./exhibition-floor",
+    position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
     scale: 3,
     onprogress: (p) => {

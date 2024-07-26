@@ -34,6 +34,18 @@ await getNewPos(newPosId)
 
 export const newPos = newPosd;
 
+/* 
+  MUD 34*2 = 68
+  MUP 2*2 = 4
+  MUDT 5*2 = 10
+  MUA 4*2 = 8
+  BAUS 10*2 = 20
+  Other Unique 3*2 = 6
+  
+  TOTAL 68+4+10+8+20+6 = 116 boards
+*/
+
+
 // export const newPos = [
 //     //MUD 20-30 5+3+4+3+4+4+1 = 24
 //     {

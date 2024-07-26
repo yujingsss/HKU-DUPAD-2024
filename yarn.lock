@@ -550,6 +550,11 @@ normalize-path@^3.0.0, normalize-path@~3.0.0:
   resolved "https://registry.yarnpkg.com/normalize-path/-/normalize-path-3.0.0.tgz#0dcd69ff23a1c9b11fd0978316644a0388216a65"
   integrity sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==
 
+offset@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/offset/-/offset-0.0.1.tgz#c51661f2eea87fadfa3b784bd661ab14928a70e7"
+  integrity sha512-gwZ/f9UeBFX5Bho7B0QpgkxLFhWm9B4ukZR8M5yOIk5Qeii3f2ob0a48Q1IGuhE8KBdNIApIP2t8nuXD9qpmKg==
+
 picocolors@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/picocolors/-/picocolors-1.0.1.tgz#a8ad579b571952f0e5d25892de5445bcfe25aaa1"

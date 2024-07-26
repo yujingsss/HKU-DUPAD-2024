@@ -17,6 +17,7 @@
   "dependencies": {
     "airtable": "^0.12.2",
     "camera-controls": "^2.8.5",
+    "offset": "^0.0.1",
     "sass": "^1.77.8",
     "three": "^0.166.0",
     "vite-plugin-externals": "^0.6.2"

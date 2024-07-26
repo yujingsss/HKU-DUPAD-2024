@@ -2,6 +2,7 @@ import * as THREE from "three";
 import CameraControls from "camera-controls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
+import offset from "offset";
 
 import { newPos } from "../newPos";
 
@@ -14,14 +15,9 @@ export class VRHall {
         }, options);
         this._gltfloader = new GLTFLoader();
         this._clock = new THREE.Clock();
-        this._eventMeshes = [];
-        this._projectGr = [];
-        this._newPos = newPos;
-        this.camFollowMove = this._options.camMoveFollowState;
-        this.projDivShow = false;
-        this._prevMesh = 0;
         this._init();
         this._initEvent();
+        this._mouseMove();
         if (this._options.debugger) {
             this._initTransformControls();
         }
@@ -29,6 +25,22 @@ export class VRHall {
         window.addEventListener("resize", this._resize.bind(this));
     }
 
+    _scene = null;
+    _camera = null;
+    _controls = null;
+    _renderer = null;
+    _raycaster = new THREE.Raycaster();
+    _eventMeshes = [];
+    _projectGr = [];
+    _hallMesh = null;
+    _floor = null;
+    _prevMesh = 0;
+    projectDivShow = false;
+    camFollowMove = true;
+    _fitToBoxDisScl = 1.6;
+    ctrlRot = new THREE.Vector2();
+    _newPos = newPos;
+    _EPS = 1e-5;
 
     _size = {
         width: window.innerWidth,
@@ -63,12 +75,12 @@ export class VRHall {
         this._scene = new THREE.Scene();
 
         //add camera
-        this._camera = new THREE.PerspectiveCamera(70, clientWidth / clientHeight, 0.1, 1000);
+        this._camera = new THREE.PerspectiveCamera(40, clientWidth / clientHeight, 0.1, 1000);
         const cameraPos = this._options.cameraPosition;
         if (window.innerWidth / window.innerHeight > 1){
-            this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
+            this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + this._EPS);
         } else if (window.innerWidth / window.innerHeight <= 1) {
-            this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + 12);
+            this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + 12 + this._EPS);
         }
         const cameraRot = this._options.cameraRotation;
         this._camera.rotation.set(cameraRot.x, cameraRot.y, cameraRot.z);
@@ -77,18 +89,45 @@ export class VRHall {
         // render
         // this._renderer.render(this._scene, this._camera);
 
-        // add lighting
-        this._scene.add(new THREE.AmbientLight(0xffffff, this._options.lightStrength));
+        //controller
+        this._controls = new CameraControls(this._camera, this._renderer.domElement);
+        this._controls.maxDistance = this._EPS;
+        // this._controls.maxDistance = this._options.controlMaxD;
+        // this._controls.minDistance = this._options.controlMinD;
+        this._controls.distance = 1;
+        this._controls.dollySpeed = 0.3;
+        this._controls.azimuthRotateSpeed = -0.3;
+        this._controls.polarRotateSpeed = 0.3;
+        this._controls.dollyToCursor = true;
+        this._controls.dragToOffset = false;
+        this._controls.smoothTime = 2;
+        this._controls.draggingSmoothTime = 0.01;
+        this._controls.maxPolarAngle = Math.PI;
+        // this._controls.minPolarAngle = 0;
+        this._controls.truckSpeed = 1;
+        this._controls.mouseButtons.wheel = CameraControls.ACTION.NONE;
+        this._controls.mouseButtons.middle = CameraControls.ACTION.TRUCK;
+        this._controls.saveState();
+        this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
 
-        const dirLight = new THREE.DirectionalLight( 0xffffff, 5 );
-        dirLight.position.set( - 10, 20, -10 );
+        // add lighting
+        this._scene.add(new THREE.AmbientLight(0x404040, this._options.lightStrength));
+
+        const dirLight = new THREE.DirectionalLight( 0xffffff, this._options.dirLightStrength );
+        dirLight.position.set( 10, 20, 10 );
         this._scene.add( dirLight );
 
         //add helper
-        if (this._options.debugger) {
+        if (this._options.debugger == true){
             this._scene.add(new THREE.AxesHelper(1000));
-            const helper = new THREE.DirectionalLightHelper( dirLight, 5 );
-            this._scene.add(helper);
+            this._gridHelper = new THREE.GridHelper(100, 50, 0x808080, 0x808080);
+            this._gridHelper.position.y = this._options.floorY;
+            this._gridHelper.material.opacity = 0.3;
+            this._gridHelper.material.depthWrite = false;
+            this._gridHelper.material.transparent = true;
+            // this._scene.add(this._gridHelper);
+            this._eventMeshes.push(this._gridHelper);
+            this._floor = this._gridHelper;
         }
     }
 
@@ -104,99 +143,73 @@ export class VRHall {
     }
 
     _cammovefollow(event) {
-        event.preventDefault();
+        // event.preventDefault();
         // console.log("pointermove activated");
-        const pointer = new THREE.Vector2();
-        pointer.x = - (event.clientX - (window.innerWidth) / 2) / (window.innerWidth/2);
-        pointer.y = - (event.clientY - (window.innerHeight) / 2) / (window.innerHeight/2);
-        this._camera.position.x += (pointer.x - this._camera.position.x) * .06;
-        this._camera.position.y += (- pointer.y - this._camera.position.y) * .06;
-        this._camera.lookAt(this._scene.position);
-        return this._cammovefollow;
+        // const pointer = new THREE.Vector2();
+        // pointer.x = - (event.clientX - (this._size.width) / 2) / (this._size.width/2);
+        // pointer.y = - (event.clientY - (this._size.height) / 2) / (this._size.height/2);
+
+        // this._camera.position.x += (pointer.x - this._camera.position.x) * .06;
+        // this._camera.position.y += (- pointer.y - this._camera.position.y) * .06;
+        // this._camera.lookAt(this._scene.position);
+        // return this._cammovefollow;
     }
 
     _initEvent() {
-        const raycaster = new THREE.Raycaster();
 
-        //main display camera movement
-        this._cammovefollow =  this._cammovefollow.bind(this);
-        if (this.camFollowMove) {
-            window.addEventListener("pointermove", this._cammovefollow);
-        }
+        // // main display camera movement
+        // this._cammovefollow =  this._cammovefollow.bind(this);
+        // if (this.camFollowMove) {
+        //     window.addEventListener("pointermove", this._cammovefollow);
+        // }
 
         const projectDetail = document.getElementById("projectDetail");
         const projectDiv = document.getElementById("projectDiv");
+        const originalProjectDivClass = projectDiv.className;
         const backicon = document.createElement("div");
-        backicon.setAttribute("class", "backicon layerthird noselect customCursor");
-        backicon.innerText = ">>";
-
-        const pointer = new THREE.Vector2();
-        //show project detail left bottom corner
-        this._options.container.addEventListener('pointermove', event => {
-            pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-            pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(pointer, this._camera);
-            //get intersection
-            const intersects = raycaster.intersectObjects(this._eventMeshes);
-            const mesh = intersects[0];
-            if (mesh) {
-                const odataMesh = this._findRootMesh(mesh.object);
-                if (odataMesh?.odata) {
-                    projectDetail.style.visibility = "visible";
-                    projectDetail.innerHTML = `
-                    <h5>${odataMesh.odata.department}</h5>
-                    <h3>${odataMesh.odata.title}</h3>
-                    <h5>${odataMesh.odata.author}<br>${odataMesh.odata.year}</h5>`;
-                }
-            } else {
-                projectDetail.innerHTML = "";
-            }
-        });
-        this._options.container.addEventListener('click', event => {
-            pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-            pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(pointer, this._camera);
-            //get intersection
-            const intersects = raycaster.intersectObjects(this._eventMeshes);
-            const mesh = intersects[0];
-            const projectDetail = document.getElementById("projectDetail");
-            if (mesh) {
-                const odataMesh = this._findRootMesh(mesh.object);
-                if (odataMesh?.odata) {
-                    projectDetail.innerHTML = `
-                    <h5>${odataMesh.odata.department}</h5>
-                    <h3>${odataMesh.odata.title}</h3>
-                    <h5>${odataMesh.odata.author}<br>${odataMesh.odata.year}</h5>`;
-                }
-            } else {
-                projectDetail.innerHTML = "";
-            }
-        });
+        backicon.setAttribute("class", "backicon layerfourth noselect customCursor hightlight-text-deco");
+        backicon.innerText = "back";
+        
         this._options.container.addEventListener('pointerdown', event => {
-            this._startxy = [event.clientX, event.clientY];
+            this._startxy = {x: event.clientX, y: event.clientY};
         });
         this._options.container.addEventListener('pointerup', event => {
-            const [sx, sy] = this._startxy;
-            if (Math.abs(event.clientX - sx) > 3 || Math.abs(event.clientY - sy) > 3) {
+            const raycaster = this._raycaster;
+            const pointer = new THREE.Vector2();
+
+            const { x, y } = this._startxy;
+            const { top, left } = offset(this._options.container);
+            const offsetPoor = 2;
+            if (
+                Math.abs(event.clientX - x) > offsetPoor ||
+                Math.abs(event.clientY - y) > offsetPoor
+            ) {
                 return;
             }
-            pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-            pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            pointer.x = ((event.clientX - left) / this._options.container.clientWidth) * 2 - 1;
+            pointer.y = -((event.clientY - top) / this._options.container.clientHeight) * 2 + 1;
 
             //cauculate Raycast
             raycaster.setFromCamera(pointer, this._camera);
 
             //get intersection
-            const intersects = raycaster.intersectObjects(this._eventMeshes);
+            const intersects = raycaster.intersectObjects(this._eventMeshes, true);
             const mesh = intersects[0];
 
-            let projectDivShow = false;
+            // let projectDivShow = false;
             if (mesh) {
                 console.log("clicked mesh check", mesh);
-                const v3 = mesh.point;
-                if (mesh.object.type == this._options.floorName) {
+                // console.log(mesh.object.parent.name);
+                if (mesh.object.parent.name == this._options.floorName) {
+                    const v3 = mesh.point;
+                    const lookat = this._camera.position.lerp(v3, 1 + this._EPS);
                     console.log(`floor clicked, move to v3, x: ${v3.x}, y: ${v3.y} z: ${v3.z}`);
-                    this._controls.moveTo(v3.x, this._options.floorY + this._options.cameraHeight, v3.z, true);
+                    const moveToY = this._options.floorY + this._options.cameraHeight;
+                    this._moveTo(
+                        { x: v3.x, y: moveToY, z: v3.z },
+                        { x: lookat.x, y: moveToY, z: lookat.z },
+                        3
+                    );
                 }
                 const odataMesh = this._findRootMesh(mesh.object);
                 if (mesh.object && odataMesh?.odata && this._options.debugger) {
@@ -205,41 +218,27 @@ export class VRHall {
                 if (odataMesh?.odata) {
                     // console.log(odataMesh.odata);
                     this._prevMesh = odataMesh.odata.index;
-                    this.camFollowMove = false;
-                    if (this.camFollowMove === false) {
-                        // console.log(camFollowMove, "remove pointermove event");
-                        window.removeEventListener("pointermove", this._cammovefollow);
-                    }
-                    if (this._controls == null){
-                        this._controls = new CameraControls(this._camera, this._renderer.domElement);
-                        this._controls.maxDistance = this._options.controlMaxD;
-                        this._controls.minDistance = this._options.controlMinD;
-                        this._controls.distance = 2;
-                        this._controls.dollySpeed = 0.5;
-                        this._controls.azimuthRotateSpeed = 0.5;
-                        this._controls.polarRotateSpeed = 0.5;
-                        this._controls.dollyToCursor = true;
-                        this._controls.saveState();
-                    }
+
+                    // this.camFollowMove = false;
+                    // if (this.camFollowMove === false) {
+                    //     // console.log(camFollowMove, "remove pointermove event");
+                    //     window.removeEventListener("pointermove", this._cammovefollow);
+                    // }
+
                     if (this._controls) {
-                        this._controls.enabled = true;
-                        this._controls.fitToBox(odataMesh, true, { paddingTop: 0.5, paddingRight: 0.5, paddingBottom: 0.5, paddingLeft: 0.5 })
-                        .then(projectDivShow = true);
-                        this._controls.rotateAzimuthTo(odataMesh.rotation.y, true);
+                        odataMesh.geometry.computeBoundingBox();
+                        const meshBBSize = odataMesh.geometry.boundingBox.getSize(new THREE.Vector3());
+                        const meshBBWidth = meshBBSize.x;
+                        const meshBBHeight = meshBBSize.y;
+                        const meshBBDepth = meshBBSize.z;
+                        const distanceToFit = this._controls.getDistanceToFitBox( meshBBWidth, meshBBHeight, meshBBDepth );
+                        this._controls.setLookAt(odataMesh.position.x, odataMesh.position.y, odataMesh.position.z + distanceToFit * this._fitToBoxDisScl, odataMesh.position.x, odataMesh.position.y, odataMesh.position.z, true);
+                        this._controls.rotateAzimuthTo(odataMesh.rotation.y, true).then(this.projectDivShow = true);
                     } 
-                    if (this._gridHelper === undefined){
-                        this._gridHelper = new THREE.GridHelper(100, 50, 0x808080, 0x808080);
-                        this._gridHelper.position.y = this._options.floorY;
-                        this._gridHelper.material.opacity = 0.3;
-                        this._gridHelper.material.depthWrite = false;
-                        this._gridHelper.material.transparent = true;
-                        this._scene.add(this._gridHelper);
-                        this._eventMeshes.push(this._gridHelper);
-                    }
 
                     document.body.appendChild(backicon);
 
-                    if (projectDivShow) {
+                    if (this.projectDivShow) {
                         projectDiv.innerHTML = "";
 
                         if (window.innerWidth < 1280){
@@ -248,44 +247,44 @@ export class VRHall {
 
                         const heroImgDiv = document.createElement("div");
                         heroImgDiv.setAttribute("class", "project-heroImg");
-                        const heroImg = document.createElement("img");
-                        heroImg.setAttribute("class", "zoomInImg");
                         if (odataMesh.odata.heroImg) {
+                            const heroImg = document.createElement("img");
+                            heroImg.setAttribute("class", "zoomInImg");
                             heroImg.src = odataMesh.odata.heroImg[0];
-                            heroImg.alt = `${odataMesh.odata.title}_hero-img`
+                            heroImg.alt = `${odataMesh.odata.title}_hero-img`;
+                            heroImgDiv.appendChild(heroImg);
                         } else {
-                            heroImg.src = "./Slide0.jpg";
+                            heroImgDiv.innerHTML = "";
                         }
-                        heroImgDiv.appendChild(heroImg);
                         const projectTitle = document.createElement("div");
                         projectTitle.setAttribute("class", "project-title");
                         let d = odataMesh.odata.department;
                         let t = odataMesh.odata.title;
                         let an = odataMesh.odata.author;
-                        if (!odataMesh.odata.department){
-                            d = "DEPARTMENT";
+                        let y = odataMesh.odata.year;
+                        if (!odataMesh.odata.department || odataMesh.odata.department === "other"){
+                            d = "";
                         }
                         if (!odataMesh.odata.title){
-                            t = `Title${odataMesh.odata.index + 1}`;
+                            t = "";
                         }
                         if (!odataMesh.odata.author){
-                            an = "Author Name";
+                            an = "";
+                        }
+                        if (!odataMesh.odata.year) {
+                            y = "";
                         }
                         projectTitle.innerHTML = 
                             `<h2>${d}</h2>
                             <h1>${t}</h1>
                             <h2>${an}<br>
-                            ${odataMesh.odata.year}</h2>`;
+                            ${y}</h2>`;
                         const projectDescription = document.createElement("div");
                         projectDescription.setAttribute("class", "project-description");
                         if (odataMesh.odata.description) {
                             projectDescription.innerHTML = `<div>${odataMesh.odata.description}</div>`;
                         } else {
-                            projectDescription.innerHTML = `<div>Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-                            Donec in laoreet magna. Ut blandit quam a convallis pharetra. Curabitur volutpat tortor quis 
-                            ligula tempor, at rutrum tellus consectetur. Vivamus quam felis, hendrerit ut euismod sit amet, 
-                            finibus in urna. Morbi molestie elit mauris, scelerisque tempor diam lobortis nec. Nullam at nulla 
-                            nibh. Morbi ut nisl congue, pulvinar justo ac, blandit orci. Proin vel lacus erat.</div>`;
+                            projectDescription.innerHTML = "";
                         }
                         const projectImg = document.createElement("div");
                         projectImg.setAttribute("class", "project-img");
@@ -299,16 +298,13 @@ export class VRHall {
                                 projectImg.appendChild(img);
                             });
                         } else {
-                            const img = document.createElement("img");
-                            img.src = "./Slide0.jpg";
-                            img.setAttribute("class", "zoomInImg");
-                            projectImg.appendChild(img);
+                            projectImg.innerHTML = "";
                         }
 
                         const projVideo = document.createElement("div");
                         projVideo.setAttribute("class", "project-video");
                         if (odataMesh.odata.video){
-                            console.log(odataMesh.odata.video);
+                            // console.log(odataMesh.odata.video);
                             const vid = document.createElement("iframe");
                             vid.src = odataMesh.odata.video;
                             vid.title = `${odataMesh.odata.title}_video`;
@@ -317,6 +313,7 @@ export class VRHall {
                         } else {
                             projVideo.style.paddingTop = 0;
                             projVideo.style.height = 0;
+                            projVideo.innerHTML = "";
                         }
 
                         const projectFooter = document.createElement("div");
@@ -363,26 +360,31 @@ export class VRHall {
                         projectDiv.appendChild(projVideo);
                         projectDiv.appendChild(projectFooter);
 
+                        projectDiv.setAttribute("class", `${originalProjectDivClass} ${odataMesh.odata.department}-g`);
+
                         // projectDiv.style.visibility = "visible";
                         projectDivTransIn();
                         projectDiv.scrollTop = 0;
-                        setTimeout(function backiconVis() { backicon.style.visibility = "visible"; }, 1500);
-
+                        setTimeout(function backiconVis() { 
+                            backicon.style.visibility = "visible"; 
+                            backicon.style.opacity = 1; }, 
+                            500
+                        );
 
                         projectDiv.addEventListener("click", (event) => {
                             event.preventDefault();
                             if (event.target.tagName != "IMG"){
                                 projectDivTransOut();
-                                projectDivShow = false;
+                                this.projectDivShow = false;
                                 backicon.style.visibility = "hidden";
-                                return this.projDivShow = projectDivShow;
+                                backicon.style.opacity = 0;
                             } 
                         });
                         backicon.addEventListener("click", () => {
                             projectDivTransOut();
-                            projectDivShow = false;
+                            this.projectDivShow = false;
                             backicon.style.visibility = "hidden";
-                            return this.projDivShow = projectDivShow;
+                            backicon.style.opacity = 0;
                         });                        
                         
                         const imgViewer = document.querySelector(".image-viewer");
@@ -415,10 +417,10 @@ export class VRHall {
                                 });
                             });
                         })
-                        return this.projDivShow = projectDivShow;
+                    } else {
                     }
                     function projectDivTransIn(){
-                        projectDiv.style.transition = "transform 1.5s ease-in-out";
+                        projectDiv.style.transition = "transform 1s ease-in-out";
                         projectDiv.style.transform = "translateY(0)";
                     }
                     function projectDivTransOut(){
@@ -428,10 +430,98 @@ export class VRHall {
                 }
             }
         });
-
-
     }
 
+    _mouseMove(){
+        const projectDetail = document.getElementById("projectDetail");
+        const originalClass = projectDetail.className;
+        const raycaster = this._raycaster;
+        const pointer = new THREE.Vector2();
+        //show project detail left bottom corner
+        this._options.container.addEventListener('pointermove', event => {
+
+            const startxy = new THREE.Vector2();
+            startxy.x =  event.clientX;
+            startxy.y =  event.clientY;
+            const { top, left } = offset(this._options.container);
+            const offsetPoor = 2;
+            if (
+                Math.abs(event.clientX - startxy.x) > offsetPoor ||
+                Math.abs(event.clientY - startxy.y) > offsetPoor
+            ) {
+                return;
+            }
+            pointer.x = ((event.clientX - left) / this._options.container.clientWidth) * 2 - 1;
+            pointer.y = -((event.clientY - top) / this._options.container.clientHeight) * 2 + 1;
+
+            //cauculate Raycast
+            raycaster.setFromCamera(pointer, this._camera);
+
+            //get intersection
+            const intersects = raycaster.intersectObjects(this._eventMeshes, true);
+            const mesh = intersects[0];
+
+            if (mesh) {
+                const odataMesh = this._findRootMesh(mesh.object);
+                if (odataMesh?.odata) {
+                    // console.log(odataMesh.odata);
+                    projectDetail.style.visibility = "visible";
+                    let detailDepartment = odataMesh.odata.department;
+                    let detailTitle = odataMesh.odata.title;
+                    let detailAuthor = odataMesh.odata.author;
+                    let detailYear = odataMesh.odata.year;
+                    if (detailDepartment === undefined || detailDepartment === "other") {
+                        detailDepartment = "";
+                    }
+                    if (detailTitle === undefined) {
+                        detailTitle = "";
+                    }
+                    if (detailAuthor === undefined) {
+                        detailAuthor = "";
+                    }
+                    if (detailYear === undefined) {
+                        detailYear = ""
+                    }
+                    projectDetail.innerHTML = `
+                    <div>${detailDepartment}</div>
+                    <div>${detailTitle}</div>
+                    <div>${detailAuthor}<br>${detailYear}</div>`;
+                    projectDetail.setAttribute("class", `${originalClass} ${odataMesh.odata.department}`);
+                    // projectDetail.classList.add(`${odataMesh.odata.department}`); 
+                } else {
+                    projectDetail.style.visibility = "hidden";
+                }
+            } else {
+                projectDetail.innerHTML = "";
+                projectDetail.style.visibility = "hidden";
+            }
+        });
+    }
+
+    _moveTo(position, lookat, duration) {
+        // this._controls.saveState();
+        const lookatV3 = new THREE.Vector3(position.x, position.y, position.z);
+        lookatV3.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
+
+        const fromPosition = new THREE.Vector3();
+        const fromLookAt = new THREE.Vector3();
+        this._controls.getPosition(fromPosition);
+        this._controls.getTarget(fromLookAt);
+
+        const lookatV32 = new THREE.Vector3(position.x, position.y, position.z);
+        lookatV32.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
+        
+        this._controls.setLookAt(
+            position.x,
+            position.y,
+            position.z,
+            lookatV3.x,
+            lookatV3.y,
+            lookatV3.z,
+            true
+        );
+    }
+ 
     _animate() {
         const delta = this._clock.getDelta();
         requestAnimationFrame(this._animate.bind(this));
@@ -439,7 +529,10 @@ export class VRHall {
             this._renderer.render(this._scene, this._camera);
         }
         if (this._controls) {
-            this._controls.update(delta);
+            const updated = this._controls.update(delta);
+            if (updated){
+                this._renderer.render(this._scene, this._camera);
+            }
         }
     }
 
@@ -480,50 +573,70 @@ export class VRHall {
 
     async _initInteraction() {
         const blocker = document.getElementById("blocker");
-        const icon = document.getElementsByClassName("icon")[0];
-        const view = document.getElementsByClassName("view")[0];
-        let viewShow = false;
-        // let blockerShow = true;
+        let blockerShow = true;
 
         const listWorks = document.querySelector("#works-list");
         const listOfWorksButton = document.querySelector("#listOfWorks");
         let showListWorks = false;
         const listWorksFocus = document.querySelectorAll(".listProject");
+        let sideWrapper = document.querySelector(".side-wrapper");
 
+        const topWrapper = document.querySelector(".top-wrapper");
+        const nav = document.querySelector(".nav");
 
         const allWorks = document.getElementById("allWorks");
         const exhibitionHall = document.getElementById("exhibitionHall");
         const projectDiv = document.getElementById("projectDiv");
-        const backicon = document.querySelector(".backicon");
 
         const aboutPg = document.getElementById("about-page");
         const about = document.getElementById("about");
         let showAboutPg = false;
 
         blocker.addEventListener("click", async () => {
-            // blockerShow = false;
+            blockerShow = false;
             blocker.style.visibility = "hidden";
             blocker.style.zIndex = "-1";
-            await this._initHall(false);
             listOfWorksButton.style.visibility = "visible";
-        });
+            await this._initHall(false);
 
-        listOfWorksButton.addEventListener("click", (event) => {
-            // console.log(this.projDivShow);
+            topWrapper.classList.remove("layerover");
+            topWrapper.classList.add("layertop");
+            nav.style.color = "#2b2b2b";
+            document.getElementById("logo-img").src = "./logo-b.png";
+        });
+        if (blockerShow) {
+            topWrapper.classList.remove("layertop");
+            topWrapper.classList.add("layerover");
+            nav.style.color = "white";
+            document.getElementById("logo-img").src = "./logo-w.png";
+        }
+
+        let sideWrapperOffsetX = sideWrapper.getBoundingClientRect().width - listOfWorksButton.getBoundingClientRect().width;
+        sideWrapper.style.transform = `translateX(${sideWrapperOffsetX}px)`;
+
+        listOfWorksButton.addEventListener("click", () => {
             showListWorks = !showListWorks;
             if (showListWorks){
                 listofworksTransIn();
             } else {
                 listofworksTransOut();
             }
-            if (viewShow){
-                transOutY(view);
-                viewShow = false;
+        });
+        listWorks.addEventListener("click", () => {
+            showListWorks = !showListWorks;
+            if (showListWorks){
+                listofworksTransIn();
+            } else {
+                listofworksTransOut();
             }
         });
 
         this._options.container.addEventListener("click", () => {
-            if (this.projDivShow == true && showListWorks == true) {
+            if (this.projectDivShow == true && showListWorks == true) {
+                listofworksTransOut();
+                showListWorks = false;
+            }
+            if (showListWorks == true) {
                 listofworksTransOut();
                 showListWorks = false;
             }
@@ -540,10 +653,10 @@ export class VRHall {
                     if (focusId == indexI) {
                         // console.log(focusId, indexI, this._projectGr[i].odata.title);
                         this._camLookAtExhibition(this._projectGr[i].position, this._projectGr[i].rotation, this._projectGr[i]);
-                        this._prevMesh = i;
+                        this._prevMesh = indexI;
                         listofworksTransOut();
                         showListWorks = false;
-                        if (this.projDivShow == true) {
+                        if (this.projectDivShow == true) {
                             transOutY(projectDiv);
                             showListWorks = false;
                         }
@@ -553,65 +666,100 @@ export class VRHall {
         });
 
         about.addEventListener("click", () => {
-            showAboutPg = true;
-            transInY(aboutPg);
-        });
-        aboutPg.addEventListener("click", () => { 
-            transOutY(aboutPg);
-            showAboutPg = false;
-        });
-
-        icon.addEventListener('click', () => {
-            listofworksTransOut();
-            showListWorks = false;
-            if (blocker.style.visibility == "hidden") {
-                viewShow = !viewShow;
-                // console.log(viewShow);
-                if (viewShow) {
-                    transInY(view);
+            showAboutPg = ! showAboutPg;
+            if (showAboutPg) {
+                transInY(aboutPg);
+                if (blockerShow){
+                    aboutPg.classList.remove("layersecond");
+                    aboutPg.classList.add("layertop");
+                    nav.style.transition = "color 1s ease-in-out";
+                    nav.style.color = "#2b2b2b";
+                    setTimeout(function changeLogo(){
+                        document.getElementById("logo-img").src = "./logo-b.png";
+                    }, 50);
                 } else {
-                    transOutY(view);
-                    viewShow = false;
+                    aboutPg.classList.remove("layertop");
+                    aboutPg.classList.add("layersecond");
+                    // nav.style.transition = "color 1s ease-in-out";
+                    // nav.style.color = "white";
+                    // setTimeout(function changeLogo(){
+                    //     document.getElementById("logo-img").src = "./logo-w.png";
+                    // }, 50);
+                    if (showListWorks) {
+                        listofworksTransOut();
+                        showListWorks = false;
+                    }
+                }
+            } else {
+                transOutY(aboutPg);
+                if (blockerShow){
+                    nav.style.transition = "color 1s ease-in-out";
+                    nav.style.color = "white";
+                    setTimeout(function changeLogo(){
+                        document.getElementById("logo-img").src = "./logo-w.png";
+                    }, 900);
+                } else {
+                    // nav.style.transition = "color 1s ease-in-out";
+                    // nav.style.color = "#2b2b2b";
+                    // setTimeout(function changeLogo(){
+                    //     document.getElementById("logo-img").src = "./logo-b.png";
+                    // }, 900);
                 }
             }
-            if (showAboutPg == true){
-                transOutY(aboutPg);
-                showAboutPg = false;
-            }
         });
-        view.addEventListener("click", () => {
-            listofworksTransOut();
-            showListWorks = false
-            viewShow = !viewShow;
-            if (viewShow) {
-                transInY(view);
-            } else {
-                transOutY(view);
-                viewShow = false;
+        aboutPg.addEventListener("click", () => { 
+            showAboutPg = false;
+            transOutY(aboutPg);
+            if (blockerShow){
+                nav.style.transition = "color 1s ease-in-out";
+                nav.style.color = "white";
+                setTimeout(function changeLogo(){
+                    document.getElementById("logo-img").src = "./logo-w.png";
+                }, 900);
             }
         });
 
         exhibitionHall.addEventListener("click", () => {
-            if (projectDiv) {
+            const backicon = document.querySelector(".backicon");
+            console.log(this.projectDivShow);
+            if (this.projectDivShow) {
                 transOutY(projectDiv);
-            }
-            if (backicon) {
+                this.projectDivShow = false;
                 backicon.style.visibility = "hidden";
+                backicon.style.opacity = 0;
+            }
+            if (showListWorks) {
+                listofworksTransOut();
+                showListWorks = false;
+            }
+            if (showAboutPg) {
+                transOutY(aboutPg);
+                showAboutPg = false;
             }
             this._initHall(true);
+            this._eventMeshes.push(this._floor);
         });
-        allWorks.addEventListener("click", async () => {
-            if (projectDiv) {
+        allWorks.addEventListener("click", () => {
+            const backicon = document.querySelector(".backicon");
+            if (this.projectDivShow) {
                 transOutY(projectDiv);
-            }
-            if (backicon) {
+                this.projectDivShow = false;
                 backicon.style.visibility = "hidden";
+                backicon.style.opacity = 0;
             }
-            await this._backToAllWorks();
+            if (showListWorks) {
+                listofworksTransOut();
+                showListWorks = false;
+            }
+            if (showAboutPg) {
+                transOutY(aboutPg);
+                showAboutPg = false;
+            }
+            this._backToAllWorks();
         });
 
         function transInY(element){
-            element.style.transition = "transform 1.5s ease-in-out";
+            element.style.transition = "transform 1s ease-in-out";
             element.style.transform = "translateY(0)";
         }
         function transOutY(element){
@@ -619,96 +767,94 @@ export class VRHall {
             element.style.transform = `translateY(-${element.getBoundingClientRect().height}px)`;
         }
         function listofworksTransIn(){
-            listWorks.style.transition = "transform 1.5s ease-in-out";
-            listWorks.style.transform = "translateX(0)";
+            sideWrapper.style.transition = "transform 1s ease-in-out";
+            sideWrapper.style.transform = "translateX(17px)";
         }
         function listofworksTransOut(){
-            listWorks.style.transition = "transform 1.5s ease-in-out";
-            listWorks.style.transform = `translateX(${listWorks.getBoundingClientRect().width}px)`;
+            sideWrapper.style.transition = "transform 1s ease-in-out";
+            sideWrapper.style.transform = `translateX(${listWorks.getBoundingClientRect().width}px)`;
         }
     }
 
     async _initHall(focusProject) {
         // console.log(this._projectGr);
         const maxSize = this._options.maxSize;
-        this.camFollowMove = false;
-        if (this.camFollowMove === false) {
-            window.removeEventListener("pointermove", this._cammovefollow);
-        }
+        // this.camFollowMove = false;
+        // if (this.camFollowMove === false) {
+        //     window.removeEventListener("pointermove", this._cammovefollow);
+        // }
         let refIndex;
         for (var i in this._projectGr) {
-            // console.log(this._projectGr[i].odata.allworkPos, this._projectGr[i].odata.allworkPos.allworkRot);
             let indexI = this._projectGr[i].odata.index;
-            // console.log(this._projectGr[i].odata.index, this._newPos[indexI]);
-            this._projectGr[i].position.set(this._newPos[indexI].position.x * (maxSize - 1), this._newPos[indexI].position.y + (this._options.floorY + 2), - (this._newPos[indexI].position.z * (maxSize - 1)));
+            this._projectGr[i].position.set(this._newPos[indexI].position.x * this._options.hallScl, this._newPos[indexI].position.y + (this._options.floorY + this._options.cameraHeight), - (this._newPos[indexI].position.z * this._options.hallScl));
+
+            if (this._projectGr[i].odata.orientation == "horizontal") {
+                this._projectGr[i].scale.set(1, 1, 1);
+            } 
+            else if (this._projectGr[i].odata.orientation == "vertical") {
+                this._projectGr[i].scale.set(0.7, 0.7, 0.7);
+            }
             this._projectGr[i].rotation.set(this._newPos[indexI].rotation.x, this._newPos[indexI].rotation.y, this._newPos[indexI].rotation.z);
             if (indexI == this._prevMesh && focusProject){
                 refIndex = i;
             }
+            if (this._options.debugger == true){
+                const boundingBox = new THREE.BoxHelper( this._projectGr[i], 0xffff00 );
+                this._scene.add(boundingBox);
+            }
         }
-        if (this._gridHelper === undefined){
-            this._gridHelper = new THREE.GridHelper(100, 50, 0x808080, 0x808080);
-            this._gridHelper.position.y = this._options.floorY;
-            this._gridHelper.material.opacity = 0.3;
-            this._gridHelper.material.depthWrite = false;
-            this._gridHelper.material.transparent = true;
-            this._scene.add(this._gridHelper);
-            this._eventMeshes.push(this._gridHelper);
-        }
+
+        this._scene.add(this._floor);
+        this._scene.add(this._hallMesh);
         if (focusProject){
-            await this._camLookAtExhibition(this._projectGr[refIndex].position, this._projectGr[refIndex].rotation, this._projectGr[refIndex]);
+            this._camLookAtExhibition(this._projectGr[refIndex].position, this._projectGr[refIndex].rotation, this._projectGr[refIndex]);
         } else {
-            if (this._controls == null){
-                this._controls = new CameraControls(this._camera, this._renderer.domElement);
-                this._controls.maxDistance = this._options.controlMaxD;
-                this._controls.minDistance = this._options.controlMinD;
-                this._controls.distance = 2;
-                this._controls.dollySpeed = 0.5;
-                this._controls.azimuthRotateSpeed = 0.5;
-                this._controls.polarRotateSpeed = 0.5;
-                this._controls.dollyToCursor = true;
-            } 
             if (this._controls) {
-                this._controls.setLookAt(-20, this._options.floorY + this._options.cameraHeight*2, 0, 0, this._options.floorY, 0, true);
+                // this._controls.reset(true);
+                // this._controls.moveTo(this._options.initialPos.x, this._options.initialPos.y, this._options.initialPos.z, true);
+                this._controls.setLookAt(
+                    this._options.initialPos.x, this._options.initialPos.y, this._options.initialPos.z + 1, 
+                    this._options.initialPos.x, this._options.initialPos.y, this._options.initialPos.z, 
+                    true
+                );
+                // this._controls.rotateAzimuthTo(Math.PI / 6, true);
             }
         }
         // console.log(this._newPos, this._projectGr);
     }
 
-    async _camLookAtExhibition(target, targetRot, t){
+    _camLookAtExhibition(target, targetRot, t){
         if (this._controls){
-            // this._lookatCameraSize = 1e-5;
-            // const p = {x: target.x, y: this._options.floorY + this._options.cameraHeight, z: target.z};
-            // const l = target;
-            // const lookat = new THREE.Vector3(p.x, p.y, p.z).lerp(new THREE.Vector3(l.x, l.y, l.z), this._lookatCameraSize);
-            // this._controls.setLookAt(p.x, p.y, p.z, lookat.x, lookat.y, lookat.z, true);
-            // this._controls.rotateAzimuthTo(targetRot.y, true);
-            this._controls.fitToBox(t, true, {paddingTop: 0.5, paddingRight: 0.5, paddingBottom: 0.5, paddingLeft: 0.5});
+            t.geometry.computeBoundingBox();
+            const meshBBSize = t.geometry.boundingBox.getSize(new THREE.Vector3());
+            const meshBBWidth = meshBBSize.x;
+            const meshBBHeight = meshBBSize.y;
+            const meshBBDepth = meshBBSize.z;
+            const distanceToFit = this._controls.getDistanceToFitBox( meshBBWidth, meshBBHeight, meshBBDepth );
+            this._controls.setLookAt(t.position.x, t.position.y, t.position.z + distanceToFit * this._fitToBoxDisScl, t.position.x, t.position.y, t.position.z, true);
             this._controls.rotateAzimuthTo(targetRot.y, true);
         }
     }
 
-   async  _backToAllWorks() {
-        if (this._controls){
-            this._controls.reset(true);
-        }
+    _backToAllWorks() {
+        this._scene.remove(this._hallMesh);
+        this._scene.remove(this._floor);
+        this._eventMeshes = [];
+
         this._projectGr.forEach(eachProj => {
             // console.log("AllWorksLayout:", eachProj.odata.index, eachProj.odata.allworkPos, this._projectGr[i].odata.allworkPos.allworkRot);
             eachProj.position.set(eachProj.odata.allworkPos.x, eachProj.odata.allworkPos.y, eachProj.odata.allworkPos.z);
             eachProj.rotation.set(eachProj.odata.allworkRot.x, eachProj.odata.allworkRot.y, eachProj.odata.allworkRot.z);
             eachProj.scale.set(1, 1, 1);
+            this._eventMeshes.push(eachProj);
         });
-        await this._camMoveLookatAnim({x:0, y:0, z:0});
-    }
-   async  _camMoveLookatAnim(target) {
-        // console.log(target);
-        if (window.innerWidth / window.innerHeight > 1) {
-            this._camera.position.set(this._options.cameraPosition.x, this._options.cameraPosition.y, this._options.cameraPosition.z);
-        } else if (window.innerWidth / window.innerHeight <= 1) {
-            this._camera.position.set(this._options.cameraPosition.x, this._options.cameraPosition.y, this._options.cameraPosition.z + 12);
-        }
         if (this._controls) {
-            this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z, target.x, target.y, target.z, true);
+            if (window.innerWidth / window.innerHeight > 1) {
+                this._camera.position.set(this._options.cameraPosition.x, this._options.cameraPosition.y, this._options.cameraPosition.z);
+            } else if (window.innerWidth / window.innerHeight <= 1) {
+                this._camera.position.set(this._options.cameraPosition.x, this._options.cameraPosition.y, this._options.cameraPosition.z + 12);
+            }
+            this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
         }
     }
 
@@ -749,8 +895,8 @@ export class VRHall {
         // let width, height;
         let width = maxSize;
         let height = (841/1190)*width;
-        const offsetX = ((posData.layerSize - 1) * posData.d) / 2;
-        const offsetY = (Math.ceil(posData.num - 1) * maxSize) / 2;
+        const offsetX = ((posData.layerSize - 1) * posData.d * this._options.layoutXDistanceScl) / 2;
+        const offsetY = (Math.ceil(posData.num - 1) * maxSize * this._options.layoutYDistanceScl) / 2;
         let counter = 0;
         items.forEach(async (item) => {
             //add project items to canvas
@@ -759,42 +905,48 @@ export class VRHall {
             const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
             //check image exist
             if (heroImg) {
+                material.color.set(0xffffff);
                 //add project frame + texture img
                 const texture = await textureLoader.loadAsync(heroImg[1]);
                 // console.log("texture", texture);
                 const prevWidth = texture.image.width;
                 const prevHeight = texture.image.height;
                 if (prevWidth > maxSize) {
-                    if (prevWidth / prevHeight > 1) {
+                    if (prevWidth / prevHeight > 1 || orientation == "horizontal") {
                         width = maxSize;
                         height = (prevHeight / prevWidth) * width;
-                    } else if (prevWidth / prevHeight < 1) {
+                    } else if (prevWidth / prevHeight < 1 || orientation == "vertical") {
                         height = maxSize;
                         width = (prevWidth / prevHeight) * height;
-                    } else  if (prevWidth / prevHeight ==  1){
-                        height = 0.7 * maxSize;
+                    } else if (prevWidth / prevHeight == 1) {
+                        height = 0.5 * maxSize;
                         width = height;
                     }
-                } else {
-                    width = maxSize;
-                    height = (prevHeight / prevWidth) * width;
                 }
                 material.map = texture;
             } else {
+                if (orientation == "vertical") {
+                    height = maxSize;
+                    width = height * (841 / 1190);
+                } else {
+                    width = maxSize;
+                    height = (841 / 1190) * width;
+                }
                 material.map = null;
+                material.color.set(0xededed);
             }
             const geometry = new THREE.BoxGeometry(width, height, this._options.depth);
             const plane = new THREE.Mesh(geometry, material);
             const layerNum = Math.floor(index / posData.layerSize);
             const layerPos = index % posData.layerSize;
             // console.log(`index: ${index}, layerNum: ${Math.floor(index / posData.layerSize)}, layerPos: ${layerPos}`);
-            pos.x = layerPos * posData.d - offsetX;
-            pos.y = offsetY - layerNum * maxSize;
+            pos.x = layerPos * posData.d * this._options.layoutXDistanceScl - offsetX;
+            pos.y = offsetY - layerNum * maxSize * this._options.layoutYDistanceScl;
             // console.log(`index: ${index}, layerNum: ${layerNum}, layerPos: ${layerPos}, posX: ${pos.x}, posZ: ${pos.z}`);
             plane.position.set(pos.x, pos.y, pos.z);
             item.allworkPos = {x: plane.position.x, y: plane.position.y, z: plane.position.z};
             // console.log("allworks", index, pos);
-            if (orientation == "vertical"){
+            if (orientation === "vertical"){
                 plane.rotation.set(0, 0, - Math.PI/2);
                 item.allworkRot = {x: plane.rotation.x, y: plane.rotation.y, z: plane.rotation.z};
             } else {
@@ -832,56 +984,105 @@ export class VRHall {
 
     async _listWorks(data){
         const listWorks = document.getElementById("works-list");
+        
+        const other = document.createElement("div");
+        const otherTitle = document.createElement("h1");
+        other.appendChild(otherTitle);
+        other.setAttribute("class", "other");
+
         const MUD = document.createElement("div");
         const MUDTitle = document.createElement("h1");
         MUDTitle.innerHTML = "MUD";
         MUD.appendChild(MUDTitle);
+        MUD.setAttribute("class", "MUD");
+
         const MUP = document.createElement("div");
         const MUPTitle = document.createElement("h1");
         MUPTitle.innerHTML = "MUP";
         MUP.appendChild(MUPTitle);
+        MUP.setAttribute("class", "MUP");
+
         const MUDT = document.createElement("div");
         const MUDTTitle = document.createElement("h1");
         MUDTTitle.innerHTML = "MUDT";
         MUDT.appendChild(MUDTTitle);
+        MUDT.setAttribute("class", "MUDT");
+
+        const MUA = document.createElement("div");
+        const MUATitle = document.createElement("h1");
+        MUATitle.innerHTML = "MUA";
+        MUA.appendChild(MUATitle);
+        MUA.setAttribute("class", "MUA");
+
         const BAUS = document.createElement("div");
         const BAUSTitle = document.createElement("h1");
         BAUSTitle.innerHTML = "BAUS";
         BAUS.appendChild(BAUSTitle);
+        BAUS.setAttribute("class", "BAUS");
+        
         listWorks.appendChild(MUD);
         listWorks.appendChild(MUP);
         listWorks.appendChild(MUDT);
+        listWorks.appendChild(MUA);
         listWorks.appendChild(BAUS);
+        listWorks.appendChild(other);
         data.forEach(d => {
             const projectIndex = document.createElement("li");
+            projectIndex.innerHTML = d.index + 1;
+            if (d.type === "project"){
+
+            } else {
+
+            }
             const department = document.createElement("li");
             const title = document.createElement("li");
+            const author = document.createElement("li");
+            if (d.department) {
+                department.innerHTML = d.department;
+            }
             title.setAttribute("id", d.index);
             title.setAttribute("class", "listProject highlight customCursor");
-            const author = document.createElement("li");
-            projectIndex.innerText = d.index + 1;
-            department.innerText = d.department;
-            title.innerText = d.title;
-            author.innerText = d.author;
-            if (d.department == "MUD"){
-                MUD.appendChild(projectIndex);
-                MUD.appendChild(title);
-                MUD.appendChild(author);
-            } 
-            else if (d.department == "MUP"){
-                MUP.appendChild(projectIndex);
-                MUP.appendChild(title);
-                MUP.appendChild(author);
+            if (d.title) {
+                title.innerHTML = d.title;
+            } else {
+                title.innerHTML = "";
             }
-            else if (d.department == "MUDT"){
-                MUDT.appendChild(projectIndex);
-                MUDT.appendChild(title);
-                MUDT.appendChild(author);
+            if (d.author){
+                author.innerHTML = d.author;
+            } else {
+                author.innerHTML = "";
             }
-            else if (d.department == "BAUS"){
-                BAUS.appendChild(projectIndex);
-                BAUS.appendChild(title);
-                BAUS.appendChild(author);
+            if (d.department){
+                if (d.department == "MUD"){
+                    MUD.appendChild(projectIndex);
+                    MUD.appendChild(title);
+                    MUD.appendChild(author);
+                } 
+                else if (d.department == "MUP"){
+                    MUP.appendChild(projectIndex);
+                    MUP.appendChild(title);
+                    MUP.appendChild(author);
+                }
+                else if (d.department == "MUDT"){
+                    MUDT.appendChild(projectIndex);
+                    MUDT.appendChild(title);
+                    MUDT.appendChild(author);
+                }
+                else if (d.department == "MUA"){
+                    MUA.appendChild(projectIndex);
+                    MUA.appendChild(title);
+                    MUA.appendChild(author);
+                }
+                else if (d.department == "BAUS"){
+                    BAUS.appendChild(projectIndex);
+                    BAUS.appendChild(title);
+                    BAUS.appendChild(author);
+                } 
+                else if (d.department == "other") {
+                    other.appendChild(projectIndex);
+                    other.appendChild(title);
+                    other.appendChild(author);
+                }
             }
         });
     }
@@ -892,19 +1093,29 @@ export class VRHall {
         items.forEach((item) => {
             const div = document.createElement("div");
             const abbrevDiv = document.createElement("div");
+            abbrevDiv.setAttribute("class", "about-1");
             const majorDiv = document.createElement("div");
+            majorDiv.setAttribute("class", "about-2");
             const aboutDiv = document.createElement("div");
+            aboutDiv.setAttribute("class", "about-3");
             const linkDiv = document.createElement("a");
-            linkDiv.setAttribute("class", "highlight customCursor");
 
-            abbrevDiv.innerHTML = item.Abbreviation;
-            majorDiv.innerHTML = item.Major;
-            aboutDiv.innerHTML = item.About;
-            linkDiv.href = item.Link;
-            linkDiv.innerText = item.Link;
-            linkDiv.target = "_blank";
-
-            div.appendChild(abbrevDiv);
+            if (item.Abbreviation) {
+                abbrevDiv.innerHTML = item.Abbreviation;
+                div.appendChild(abbrevDiv);
+            }
+            if (item.Major){
+                majorDiv.innerHTML = item.Major;
+            }
+            if (item.About){
+                aboutDiv.innerHTML = item.About;
+            }
+            if (item.Link){
+                linkDiv.setAttribute("class", "highlight customCursor");
+                linkDiv.href = item.Link;
+                linkDiv.innerText = item.Link;
+                linkDiv.target = "_blank";
+            }
             div.appendChild(majorDiv);
             div.appendChild(aboutDiv);
             div.appendChild(linkDiv);
@@ -925,10 +1136,26 @@ export class VRHall {
         if (rotation) {
             gltf.scene.rotation.set(rotation.x, rotation.y, rotation.z);
         }
-        this._eventMeshes.push(gltf.scene);
-        this._scene.add(gltf.scene);
-        // console.log(gltf.scene);
+        // this._eventMeshes.push(gltf.scene);
+        this._hallMesh = gltf.scene;
         console.log("Hall Loaded");
+    }
+    async loadModel(params) {
+        const { url, onProgress, position, scale, rotation } = params;
+        const gltf = await this.loadGltf({ url, onProgress });
+        if (position) {
+            gltf.scene.position.set(position.x, position.y, position.z);
+        }
+        if (scale) {
+            gltf.scene.scale.set(scale, scale, scale);
+        }
+        if (rotation) {
+            gltf.scene.rotation.set(rotation.x, rotation.y, rotation.z);
+        }
+        gltf.scene.name = this._options.floorName;
+        this._eventMeshes.push(gltf.scene);
+        this._floor = gltf.scene;
+        console.log("Floor Loaded");
     }
 
     loadGltf(params) {
