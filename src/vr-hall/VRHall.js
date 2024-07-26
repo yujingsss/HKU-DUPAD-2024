@@ -109,16 +109,16 @@ export class VRHall {
         this._controls.dragToOffset = false;
         this._controls.smoothTime = 1.6;
         this._controls.draggingSmoothTime = 0.01;
-        this._controls.maxPolarAngle = Math.PI * 0.7;
-        this._controls.minPolarAngle = Math.PI / 2;
-        this._controls.maxAzimuthAngle = Math.PI * 0.3;
-        this._controls.minAzimuthAngle = - Math.PI * 0.3;
+        this._controls.maxPolarAngle = Math.PI * 0.6;
+        this._controls.minPolarAngle = (Math.PI / 2) * 0.8;
+        // this._controls.maxAzimuthAngle = Math.PI * 0.3;
+        // this._controls.minAzimuthAngle = - Math.PI * 0.3;
         this._controls.truckSpeed = 1;
-        this._controls.mouseButtons.wheel = CameraControls.ACTION.ZOOM;
+        this._controls.mouseButtons.wheel = CameraControls.ACTION.NONE;
         this._controls.touches.two = CameraControls.ACTION.NONE;
         this._controls.touches.three = CameraControls.ACTION.NONE;
-        this._controls.maxZoom = 5;
-        this._controls.minZoom = 2;
+        // this._controls.maxZoom = 5;
+        // this._controls.minZoom = 2;
         this._controls.saveState();
         this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
 
@@ -855,8 +855,8 @@ export class VRHall {
         }
 
         if (focusProject){
-            this._controls.maxPolarAngle = Math.PI * 0.7;
-            this._controls.minPolarAngle = Math.PI / 2;
+            // this._controls.maxPolarAngle = Math.PI * 0.7;
+            // this._controls.minPolarAngle = Math.PI / 2;
             this._camLookAtExhibition(this._projectGr[refIndex].position, this._projectGr[refIndex].rotation, this._projectGr[refIndex]);
         } else {
             if (this._controls) {
@@ -875,6 +875,8 @@ export class VRHall {
 
     _camLookAtExhibition(target, targetRot, t){
         if (this._controls){
+            this._controls.maxPolarAngle = Math.PI * 0.6;
+            this._controls.minPolarAngle = (Math.PI / 2) * 0.8;
             t.geometry.computeBoundingBox();
             const meshBBSize = t.geometry.boundingBox.getSize(new THREE.Vector3());
             const meshBBWidth = meshBBSize.x;
