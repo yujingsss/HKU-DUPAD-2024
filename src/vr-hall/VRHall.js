@@ -37,6 +37,7 @@ export class VRHall {
     _prevMesh = 0;
     projectDivShow = false;
     camFollowMove = true;
+    backtoallworkState = false;
     _fitToBoxDisScl = 1.6;
     ctrlRot = new THREE.Vector2();
     _newPos = newPos;
@@ -75,7 +76,7 @@ export class VRHall {
         this._scene = new THREE.Scene();
 
         //add camera
-        this._camera = new THREE.PerspectiveCamera(50, clientWidth / clientHeight, 0.1, 1000);
+        this._camera = new THREE.PerspectiveCamera(60, clientWidth / clientHeight, 0.1, 1000);
         const cameraPos = this._options.cameraPosition;
         if (window.innerWidth / window.innerHeight > 1){
             this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + this._EPS);
@@ -110,14 +111,16 @@ export class VRHall {
         this._controls.smoothTime = 1.6;
         this._controls.draggingSmoothTime = 0.01;
         this._controls.maxPolarAngle = Math.PI * 0.6;
-        this._controls.minPolarAngle = (Math.PI / 2) * 0.8;
+        this._controls.minPolarAngle = (Math.PI / 2) * 0.9;
         // this._controls.maxAzimuthAngle = Math.PI * 0.3;
         // this._controls.minAzimuthAngle = - Math.PI * 0.3;
         this._controls.truckSpeed = 1;
+        this._controls.mouseButtons.left = CameraControls.ACTION.ROTATE;
         this._controls.mouseButtons.wheel = CameraControls.ACTION.NONE;
+        this._controls.touches.one = CameraControls.ACTION.ROTATE;
         this._controls.touches.two = CameraControls.ACTION.NONE;
         this._controls.touches.three = CameraControls.ACTION.NONE;
-        // this._controls.maxZoom = 5;
+        this._controls.maxZoom = 3;
         // this._controls.minZoom = 2;
         this._controls.saveState();
         this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
@@ -181,6 +184,7 @@ export class VRHall {
         const backicon = document.createElement("div");
         backicon.setAttribute("class", "backicon layerfourth noselect customCursor hightlight-text-deco");
         backicon.innerText = "back";
+        document.body.appendChild(backicon);
         
         this._options.container.addEventListener('pointerdown', event => {
             this._startxy = {x: event.clientX, y: event.clientY};
@@ -237,18 +241,20 @@ export class VRHall {
                     //     window.removeEventListener("pointermove", this._cammovefollow);
                     // }
 
-                    if (this._controls) {
+                    if (this._controls && this.backtoallworkState == false) {
                         odataMesh.geometry.computeBoundingBox();
                         const meshBBSize = odataMesh.geometry.boundingBox.getSize(new THREE.Vector3());
                         const meshBBWidth = meshBBSize.x;
                         const meshBBHeight = meshBBSize.y;
                         const meshBBDepth = meshBBSize.z;
                         const distanceToFit = this._controls.getDistanceToFitBox( meshBBWidth, meshBBHeight, meshBBDepth );
-                        this._controls.setLookAt(odataMesh.position.x, odataMesh.position.y, odataMesh.position.z + distanceToFit * this._fitToBoxDisScl, odataMesh.position.x, odataMesh.position.y, odataMesh.position.z, true);
+                        this._controls.setLookAt(odataMesh.position.x, this._options.cameraHeight, odataMesh.position.z + distanceToFit * this._fitToBoxDisScl, odataMesh.position.x, odataMesh.position.y, odataMesh.position.z, true);
+                        // this._controls.setLookAt(odataMesh.position.x, odataMesh.position.y, odataMesh.position.z + distanceToFit * this._fitToBoxDisScl, odataMesh.position.x, odataMesh.position.y, odataMesh.position.z, true);
                         this._controls.rotateAzimuthTo(odataMesh.rotation.y, true).then(this.projectDivShow = true);
                     } 
-
-                    document.body.appendChild(backicon);
+                    if (this.backtoallworkState == true) {
+                        this.projectDivShow = true;
+                    }
 
                     if (this.projectDivShow) {
                         projectDiv.innerHTML = "";
@@ -453,43 +459,34 @@ export class VRHall {
         let prevPointerX, prevPointerY = 0;
         this._options.container.addEventListener('pointermove', event => {
 
-            // const pointer = new THREE.Vector2();
-            // pointer.x = - (event.clientX - (this._size.width) / 2) / (this._size.width/2);
-            // // pointer.y = - (event.clientY - (this._size.height) / 2) / (this._size.height/2);
-            // pointer.y = 1 - (event.clientY / this._size.height);
-            // console.log(pointer);
+            if (this.backtoallworkState == true) {
+                const pointer = new THREE.Vector2();
+                pointer.x = - (event.clientX - (this._size.width) / 2) / (this._size.width/2);
+                pointer.y = - (event.clientY - (this._size.height) / 2) / (this._size.height/2);
+                // console.log(pointer);
+                prevPointerX = pointer.x;
+                prevPointerY = pointer.y;
 
-            // if (pointer.x - prevPointerX > 0){
-
-            // } else {
-
-            // }
-            // if (pointer.y - prevPointerY > 0) {
-
-            // } else {
-
-            // }
-
-            // prevPointerX = pointer.x;
-            // prevPointerY = pointer.y;
-
-            // const fromPosition = new THREE.Vector3();
-            // const fromLookAt = new THREE.Vector3();
-            // this._controls.getPosition(fromPosition);
-            // this._controls.getTarget(fromLookAt);
-            // // console.log(fromPosition);
-            // console.log(this._camera);
-            // // const lookatV32 = new THREE.Vector3(position.x, position.y, position.z);
-            // // lookatV32.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
-            // if (pointer.x )
-            // this._controls.setLookAt(
-            //     -38 + pointer.x * 0.8, 2.2 - pointer.y * 0.5, 17,
-            //     -38, 2.2, 16,
-            //     true
-            // );
+                const fromPosition = new THREE.Vector3();
+                const fromLookAt = new THREE.Vector3();
+                this._controls.getPosition(fromPosition);
+                this._controls.getTarget(fromLookAt);
+                // console.log(fromPosition, fromLookAt);
+                // const lookatV32 = new THREE.Vector3(position.x, position.y, position.z);
+                // lookatV32.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
+                const cameraPos = this._options.cameraPosition;
+                // if (window.innerWidth / window.innerHeight > 1){
+                //     this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + this._EPS);
+                // } else if (window.innerWidth / window.innerHeight <= 1) {
+                //     this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + 12 + this._EPS);
+                // }
+                this._controls.setLookAt(
+                    cameraPos.x + pointer.x * 8, cameraPos.y - pointer.y * 10, cameraPos.z + this._options.cameraOffZ,
+                    0, 0, 0,
+                    true
+                );
+            }
             
-
-
             const startxy = new THREE.Vector2();
             startxy.x =  event.clientX;
             startxy.y =  event.clientY;
@@ -827,6 +824,7 @@ export class VRHall {
     }
 
     async _initHall(focusProject) {
+        this.backtoallworkState = false;
         // console.log(this._projectGr);
         const maxSize = this._options.maxSize;
         // this.camFollowMove = false;
@@ -836,7 +834,8 @@ export class VRHall {
         let refIndex;
         for (var i in this._projectGr) {
             let indexI = this._projectGr[i].odata.index;
-            this._projectGr[i].position.set(this._newPos[indexI].position.x * this._options.hallScl, this._newPos[indexI].position.y + (this._options.floorY + this._options.cameraHeight), - (this._newPos[indexI].position.z * this._options.hallScl));
+            // this._projectGr[i].position.set(this._newPos[indexI].position.x * this._options.hallScl, this._newPos[indexI].position.y + (this._options.floorY + this._options.cameraHeight), - (this._newPos[indexI].position.z * this._options.hallScl));
+            this._projectGr[i].position.set(this._newPos[indexI].position.x * this._options.hallScl, this._newPos[indexI].position.y + (this._options.floorY + this._options.projectHeight), - (this._newPos[indexI].position.z * this._options.hallScl));
 
             if (this._projectGr[i].odata.orientation == "horizontal") {
                 this._projectGr[i].scale.set(1, 1, 1);
@@ -868,6 +867,8 @@ export class VRHall {
                 // this._controls.rotateAzimuthTo(Math.PI / 6, true);
             }
         }
+        this._controls.mouseButtons.left = CameraControls.ACTION.ROTATE;
+        this._controls.touches.one = CameraControls.ACTION.ROTATE;
         this._scene.add(this._floor);
         this._scene.add(this._hallMesh);
         // console.log(this._newPos, this._projectGr);
@@ -875,15 +876,16 @@ export class VRHall {
 
     _camLookAtExhibition(target, targetRot, t){
         if (this._controls){
-            this._controls.maxPolarAngle = Math.PI * 0.6;
-            this._controls.minPolarAngle = (Math.PI / 2) * 0.8;
+            // this._controls.maxPolarAngle = Math.PI * 0.6;
+            // this._controls.minPolarAngle = (Math.PI / 2) * 0.9;
             t.geometry.computeBoundingBox();
             const meshBBSize = t.geometry.boundingBox.getSize(new THREE.Vector3());
             const meshBBWidth = meshBBSize.x;
             const meshBBHeight = meshBBSize.y;
             const meshBBDepth = meshBBSize.z;
             const distanceToFit = this._controls.getDistanceToFitBox( meshBBWidth, meshBBHeight, meshBBDepth );
-            this._controls.setLookAt(t.position.x, t.position.y, t.position.z + distanceToFit * this._fitToBoxDisScl, t.position.x, t.position.y, t.position.z, true);
+            // this._controls.setLookAt(t.position.x, t.position.y, t.position.z + distanceToFit * this._fitToBoxDisScl, t.position.x, t.position.y, t.position.z, true);
+            this._controls.setLookAt(t.position.x, this._options.cameraHeight, t.position.z + distanceToFit * this._fitToBoxDisScl, t.position.x, t.position.y, t.position.z, true);
             this._controls.rotateAzimuthTo(targetRot.y, true);
         }
     }
@@ -901,6 +903,8 @@ export class VRHall {
             this._eventMeshes.push(eachProj);
         });
         if (this._controls) {
+            this._controls.mouseButtons.left = CameraControls.ACTION.NONE;
+            this._controls.touches.one = CameraControls.ACTION.NONE;
             // this._controls.reset(true);
             // this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
             if (window.innerWidth / window.innerHeight > 1) {
@@ -909,9 +913,10 @@ export class VRHall {
                 this._camera.position.set(this._options.cameraPosition.x, this._options.cameraPosition.y, this._options.cameraPosition.z + 12);
             }
             this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
-            this._controls.maxPolarAngle = Math.PI;
-            this._controls.minPolarAngle = 0;
+            // this._controls.maxPolarAngle = Math.PI;
+            // this._controls.minPolarAngle = 0;
         }
+        this.backtoallworkState = true;
     }
 
     //load items
