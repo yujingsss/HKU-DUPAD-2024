@@ -475,16 +475,19 @@ export class VRHall {
                 // const lookatV32 = new THREE.Vector3(position.x, position.y, position.z);
                 // lookatV32.lerp(new THREE.Vector3(lookat.x, lookat.y, lookat.z), this._EPS);
                 const cameraPos = this._options.cameraPosition;
-                // if (window.innerWidth / window.innerHeight > 1){
-                //     this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + this._EPS);
-                // } else if (window.innerWidth / window.innerHeight <= 1) {
-                //     this._camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z + 12 + this._EPS);
-                // }
-                this._controls.setLookAt(
-                    cameraPos.x + pointer.x * 8, cameraPos.y - pointer.y * 10, cameraPos.z + this._options.cameraOffZ,
-                    0, 0, 0,
-                    true
-                );
+                if (window.innerWidth / window.innerHeight > 1) {
+                    this._controls.setLookAt(
+                        cameraPos.x + pointer.x * 8, cameraPos.y - pointer.y * 10, cameraPos.z + this._options.cameraOffZ,
+                        0, 0, 0,
+                        true
+                    );
+                } else if (window.innerWidth / window.innerHeight <= 1) {
+                    this._controls.setLookAt(
+                        cameraPos.x + pointer.x * 25, cameraPos.y - pointer.y * 20, cameraPos.z + this._options.cameraOffZ + 30,
+                        0, 0, 0,
+                        true
+                    );
+                }
             }
             
             const startxy = new THREE.Vector2();
@@ -628,7 +631,8 @@ export class VRHall {
         const listWorksFocus = document.querySelectorAll(".listProject");
         let sideWrapper = document.querySelector(".side-wrapper");
 
-        const topWrapper = document.querySelector(".top-wrapper");
+        // const topWrapper = document.querySelector(".top-wrapper");
+        const topWrapper = document.querySelectorAll(".top-wrapper");
         const nav = document.querySelector(".nav");
 
         const allWorks = document.getElementById("allWorks");
@@ -646,14 +650,22 @@ export class VRHall {
             listOfWorksButton.style.visibility = "visible";
             await this._initHall(false);
 
-            topWrapper.classList.remove("layerover");
-            topWrapper.classList.add("layertop");
+            topWrapper.forEach( d => {
+                d.classList.remove("layerover");
+                d.classList.add("layertop");
+            })
+            // topWrapper.classList.remove("layerover");
+            // topWrapper.classList.add("layertop");
             nav.style.color = "#2b2b2b";
             document.getElementById("logo-img").src = "./logo-b.png";
         });
         if (blockerShow) {
-            topWrapper.classList.remove("layertop");
-            topWrapper.classList.add("layerover");
+            topWrapper.forEach( d => {
+                d.classList.remove("layertop");
+                d.classList.add("layerover");
+            })
+            // topWrapper.classList.remove("layertop");
+            // topWrapper.classList.add("layerover");
             nav.style.color = "white";
             document.getElementById("logo-img").src = "./logo-w.png";
         }
@@ -936,7 +948,7 @@ export class VRHall {
             };
             maxSize = this._options.maxSize;
         } else if (window.innerWidth / window.innerHeight < 1) {
-            layerS = this._options.projectDistance - 1;
+            layerS = this._options.projectDistance - 4;
             posData = {
                 layerSize: layerS,
                 d: this._options.projectDistance,

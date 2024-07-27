@@ -372,19 +372,22 @@ svg {
 }
 
 .top-wrapper {
-  box-sizing: border-box;
-  position: absolute;
+  position: fixed;
   top: 0;
-  left: 0;
-  width: 100vw;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  padding: 1.25em;
+  // left: 0;
+  // width: 100vw;
+  // display: flex;
+  // flex-direction: row;
+  // flex-wrap: nowrap;
+  // justify-content: space-between;
+  max-width: 30vw;
 }
 .logo {
-  width: 15%;
+  padding: 1.25em;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 15vw;
   transition: transform 0.3s ease-in-out;
 }
 .logo img {
@@ -395,9 +398,14 @@ svg {
   transform: scale(1.03);
 }
 .nav {
+  max-width: max-content;
+  padding: 1.25em;
+  position: fixed;
+  top: 0;
+  right: 0;
   font-weight: 500;
   display: flex;
-  flex-direction: row-reverse;
+  flex-direction: row;
   height: fit-content;
 }
 .nav > div {
@@ -733,7 +741,8 @@ svg {
 @media only screen and (max-width: 512px) {
   //lodaertext
   .panel {
-    font-stretch: 104%;
+    // border: solid 1px white;
+    font-stretch: 110%;
     letter-spacing: 4px;
   }
   #instructions * {
@@ -752,11 +761,12 @@ svg {
   #instructions #info {
     font-size: 0.95em;
   }
-  .top-wrapper {
+  .logo {
+    width: 30vw;
     padding: 1em 0.5em 0.5em 0.5em;
   }
-  .logo {
-    width: 30%;
+  .nav {
+    padding: 1em 0.5em 0.5em 0.5em;
   }
   .nav > div {
     padding-left: 0.6em;
