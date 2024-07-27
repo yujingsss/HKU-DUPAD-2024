@@ -116,12 +116,12 @@ export class VRHall {
         // this._controls.minAzimuthAngle = - Math.PI * 0.3;
         this._controls.truckSpeed = 1;
         this._controls.mouseButtons.left = CameraControls.ACTION.ROTATE;
-        this._controls.mouseButtons.wheel = CameraControls.ACTION.NONE;
+        this._controls.mouseButtons.wheel = CameraControls.ACTION.ZOOM;
         this._controls.touches.one = CameraControls.ACTION.ROTATE;
         this._controls.touches.two = CameraControls.ACTION.NONE;
         this._controls.touches.three = CameraControls.ACTION.NONE;
-        this._controls.maxZoom = 3;
-        // this._controls.minZoom = 2;
+        this._controls.maxZoom = 2;
+        this._controls.minZoom = 1;
         this._controls.saveState();
         this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
 
@@ -134,7 +134,7 @@ export class VRHall {
 
         //checi window size
         if (window.innerWidth / window.innerHeight > 1){
-            this._fitToBoxDisScl = 1.6;
+            this._fitToBoxDisScl = 1.8;
         } else if (window.innerWidth / window.innerHeight <= 1) {
            this. _fitToBoxDisScl = 1;
         }
@@ -275,7 +275,7 @@ export class VRHall {
                         heroImgDiv.setAttribute("class", "project-heroImg");
                         if (odataMesh.odata.heroImg) {
                             const heroImg = document.createElement("img");
-                            heroImg.setAttribute("class", "zoomInImg");
+                            // heroImg.setAttribute("class", "zoomInImg");
                             heroImg.src = odataMesh.odata.heroImg[0];
                             heroImg.alt = `${odataMesh.odata.title}_hero-img`;
                             heroImgDiv.appendChild(heroImg);
@@ -851,6 +851,7 @@ export class VRHall {
         // if (this.camFollowMove === false) {
         //     window.removeEventListener("pointermove", this._cammovefollow);
         // }
+
         let refIndex;
         for (var i in this._projectGr) {
             let indexI = this._projectGr[i].odata.index;
@@ -887,11 +888,36 @@ export class VRHall {
                 // this._controls.rotateAzimuthTo(Math.PI / 6, true);
             }
         }
+
         this._controls.mouseButtons.left = CameraControls.ACTION.ROTATE;
         this._controls.touches.one = CameraControls.ACTION.ROTATE;
         this._scene.add(this._floor);
         this._scene.add(this._hallMesh);
         // console.log(this._newPos, this._projectGr);
+
+        this._controls.boundaryEnclosesCamera = true;
+        const origianlfloorbox = new THREE.BoxHelper(this._floor, 0xffff00);
+        origianlfloorbox.geometry.computeBoundingBox();
+        const meshBBSize = origianlfloorbox.geometry.boundingBox.getSize(new THREE.Vector3());
+        const meshBBWidth = meshBBSize.x;
+        const meshBBHeight = meshBBSize.y;
+        const meshBBDepth = meshBBSize.z;
+        console.log(meshBBSize);
+        const Box3 = new THREE.Box3();
+        const mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(meshBBWidth, 20, meshBBDepth),
+            // new THREE.MeshBasicMaterial( {color: 0x00ff00} ),
+        ); 
+        mesh.geometry.computeBoundingBox();
+        mesh.position.x = mesh.position.x - 1;
+        mesh.position.y = 10;
+        mesh.position.z = mesh.position.z - 2;
+        Box3.copy( mesh.geometry.boundingBox ).applyMatrix4( mesh.matrixWorld );
+        this._controls.setBoundary(Box3);
+        if (this._options.debugger){
+            const newbox = new THREE.BoxHelper(mesh, 0xff0000);
+            this._scene.add(newbox);
+        }
     }
 
     _camLookAtExhibition(target, targetRot, t){
@@ -938,6 +964,7 @@ export class VRHall {
             this._controls.setLookAt(this._camera.position.x, this._camera.position.y, this._camera.position.z + this._options.cameraOffZ, 0, 0, 0, true);
             // this._controls.maxPolarAngle = Math.PI;
             // this._controls.minPolarAngle = 0;
+            this._controls.boundaryEnclosesCamera = false;
         }
         this.backtoallworkState = true;
     }
