@@ -132,6 +132,13 @@ export class VRHall {
         dirLight.position.set( 10, 20, 10 );
         this._scene.add( dirLight );
 
+        //checi window size
+        if (window.innerWidth / window.innerHeight > 1){
+            this._fitToBoxDisScl = 1.6;
+        } else if (window.innerWidth / window.innerHeight <= 1) {
+           this. _fitToBoxDisScl = 1;
+        }
+
         //add helper
         if (this._options.debugger == true){
             this._scene.add(new THREE.AxesHelper(1000));
@@ -248,7 +255,8 @@ export class VRHall {
                         const meshBBHeight = meshBBSize.y;
                         const meshBBDepth = meshBBSize.z;
                         const distanceToFit = this._controls.getDistanceToFitBox( meshBBWidth, meshBBHeight, meshBBDepth );
-                        this._controls.setLookAt(odataMesh.position.x, this._options.cameraHeight, odataMesh.position.z + distanceToFit * this._fitToBoxDisScl, odataMesh.position.x, odataMesh.position.y, odataMesh.position.z, true);
+                        this._controls.setLookAt(odataMesh.position.x, this._options.cameraHeight, odataMesh.position.z + distanceToFit * this._fitToBoxDisScl, 
+                            odataMesh.position.x, this._options.cameraHeight, odataMesh.position.z, true);
                         // this._controls.setLookAt(odataMesh.position.x, odataMesh.position.y, odataMesh.position.z + distanceToFit * this._fitToBoxDisScl, odataMesh.position.x, odataMesh.position.y, odataMesh.position.z, true);
                         this._controls.rotateAzimuthTo(odataMesh.rotation.y, true).then(this.projectDivShow = true);
                     } 
@@ -897,7 +905,10 @@ export class VRHall {
             const meshBBDepth = meshBBSize.z;
             const distanceToFit = this._controls.getDistanceToFitBox( meshBBWidth, meshBBHeight, meshBBDepth );
             // this._controls.setLookAt(t.position.x, t.position.y, t.position.z + distanceToFit * this._fitToBoxDisScl, t.position.x, t.position.y, t.position.z, true);
-            this._controls.setLookAt(t.position.x, this._options.cameraHeight, t.position.z + distanceToFit * this._fitToBoxDisScl, t.position.x, t.position.y, t.position.z, true);
+            this._controls.setLookAt(t.position.x, this._options.cameraHeight, t.position.z + distanceToFit * this._fitToBoxDisScl, 
+                t.position.x, this._options.cameraHeight, t.position.z, 
+                true
+            );
             this._controls.rotateAzimuthTo(targetRot.y, true);
         }
     }
