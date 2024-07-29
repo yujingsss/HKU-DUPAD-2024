@@ -38,6 +38,7 @@ export class VRHall {
     projectDivShow = false;
     camFollowMove = true;
     backtoallworkState = false;
+    backtoallworkzoomState = false;
     _fitToBoxDisScl = 1.6;
     ctrlRot = new THREE.Vector2();
     _newPos = newPos;
@@ -404,6 +405,7 @@ export class VRHall {
                                 this.projectDivShow = false;
                                 backicon.style.visibility = "hidden";
                                 backicon.style.opacity = 0;
+                                this.backtoallworkzoomState = false;
                             } 
                         });
                         backicon.addEventListener("click", () => {
@@ -411,6 +413,7 @@ export class VRHall {
                             this.projectDivShow = false;
                             backicon.style.visibility = "hidden";
                             backicon.style.opacity = 0;
+                            this.backtoallworkzoomState = false;
                         });                        
                         
                         const imgViewer = document.querySelector(".image-viewer");
@@ -467,7 +470,7 @@ export class VRHall {
         let prevPointerX, prevPointerY = 0;
         this._options.container.addEventListener('pointermove', event => {
 
-            if (this.backtoallworkState == true) {
+            if (this.backtoallworkState == true && this.backtoallworkzoomState == false) {
                 const pointer = new THREE.Vector2();
                 pointer.x = - (event.clientX - (this._size.width) / 2) / (this._size.width/2);
                 pointer.y = - (event.clientY - (this._size.height) / 2) / (this._size.height/2);
@@ -930,11 +933,19 @@ export class VRHall {
             const meshBBHeight = meshBBSize.y;
             const meshBBDepth = meshBBSize.z;
             const distanceToFit = this._controls.getDistanceToFitBox( meshBBWidth, meshBBHeight, meshBBDepth );
-            // this._controls.setLookAt(t.position.x, t.position.y, t.position.z + distanceToFit * this._fitToBoxDisScl, t.position.x, t.position.y, t.position.z, true);
-            this._controls.setLookAt(t.position.x, this._options.cameraHeight, t.position.z + distanceToFit * this._fitToBoxDisScl, 
-                t.position.x, this._options.cameraHeight, t.position.z, 
+            if (this.backtoallworkState == true){
+            this._controls.setLookAt(
+                t.position.x, t.position.y, t.position.z + distanceToFit * this._fitToBoxDisScl, 
+                t.position.x, t.position.y, t.position.z, 
                 true
             );
+            this.backtoallworkzoomState = true;
+            } else {
+                this._controls.setLookAt(t.position.x, this._options.cameraHeight, t.position.z + distanceToFit * this._fitToBoxDisScl, 
+                    t.position.x, this._options.cameraHeight, t.position.z, 
+                    true
+                );
+            }
             this._controls.rotateAzimuthTo(targetRot.y, true);
         }
     }
@@ -967,6 +978,7 @@ export class VRHall {
             this._controls.boundaryEnclosesCamera = false;
         }
         this.backtoallworkState = true;
+        this.backtoallworkzoomState = false;
     }
 
     //load items
