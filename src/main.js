@@ -139,7 +139,7 @@ async function main() {
     cameraPosition: { x: 0, y: 0, z: 0 },
     cameraRotation: { x: 0, y: 0, z: 0 },
     cameraOffZ : 35,
-    mobileCamOffZ: 20,
+    mobileCamOffZ: 25,
     initialPos: {x: -38, y: 2.8, z: 16},
     projectDistance: 10,
     layerProjectNum: 11.6,
