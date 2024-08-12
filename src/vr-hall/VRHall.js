@@ -22,6 +22,11 @@ export class VRHall {
         }
         this._animate();
         window.addEventListener("resize", this._resize.bind(this));
+        if (window.innerWidth / window.innerHeight > 1) {
+            this._fitToBoxDisScl = 2.25;
+        } else if (window.innerWidth / window.innerHeight <= 1) {
+            this._fitToBoxDisScl = 1.2;
+        }
     }
 
     _scene = null;
@@ -38,7 +43,7 @@ export class VRHall {
     mousefollowState = false;
     backtoallworkState = false;
     backtoallworkzoomState = false;
-    _fitToBoxDisScl = 2;
+    // _fitToBoxDisScl = 2;
     _newPos = newPos;
     _EPS = 1e-5;
     _camRestPos = new THREE.Vector3();
@@ -109,7 +114,7 @@ export class VRHall {
         this._controls.dragToOffset = false;
         this._controls.smoothTime = 1.6;
         this._controls.draggingSmoothTime = 0.01;
-        this._controls.restThreshold = 0.1;
+        this._controls.restThreshold = 0.01;
         this._controls.maxPolarAngle = Math.PI * 0.6;
         this._controls.minPolarAngle = (Math.PI / 2) * 0.9;
         // this._controls.maxAzimuthAngle = Math.PI / 2;
@@ -133,13 +138,6 @@ export class VRHall {
         const dirLight = new THREE.DirectionalLight( 0xffffff, this._options.dirLightStrength );
         dirLight.position.set( 10, 20, 10 );
         this._scene.add( dirLight );
-
-        //checi window size
-        if (window.innerWidth / window.innerHeight > 1){
-            this._fitToBoxDisScl = 2.25;
-        } else if (window.innerWidth / window.innerHeight <= 1) {
-           this. _fitToBoxDisScl = 1;
-        }
 
         //add helper
         if (this._options.debugger == true){
@@ -169,6 +167,52 @@ export class VRHall {
     _initEvent() {
 
         this._mouseMove();
+        if (window.innerWidth / window.innerHeight > 1){
+            this._controls.addEventListener('rest', () => {
+                console.log("mousefollow");
+                this._controls.getPosition(this._camRestPos);
+                this._controls.getTarget(this._camRestLookAt);
+                this._controls.getSpherical(this._camRestRot, true);
+                this.mousefollowState = true;
+            });
+            this._controls.addEventListener('controlstart', () => { 
+                console.log("controlstart"); 
+                this.mousefollowState = false;
+            });
+            this._controls.addEventListener('control', () => {
+                console.log("control"); 
+                this.mousefollowState = false;
+            });
+            this._controls.addEventListener('controlend', () => {
+                console.log("controlend"); 
+                this._controls.getPosition(this._camRestPos);
+                this._controls.getTarget(this._camRestLookAt);
+                this._controls.getSpherical(this._camRestRot, true);
+                this.mousefollowState = true;
+            });
+        }
+        // this._controls.addEventListener('rest', () => {
+        //     console.log("mousefollow");
+        //     this._controls.getPosition(this._camRestPos);
+        //     this._controls.getTarget(this._camRestLookAt);
+        //     this._controls.getSpherical(this._camRestRot, true);
+        //     this.mousefollowState = true;
+        // });
+        // this._controls.addEventListener('controlstart', () => { 
+        //     console.log("controlstart"); 
+        //     this.mousefollowState = false;
+        // });
+        // this._controls.addEventListener('control', () => {
+        //     console.log("control"); 
+        //     this.mousefollowState = false;
+        // });
+        // this._controls.addEventListener('controlend', () => {
+        //     console.log("controlend"); 
+        //     this._controls.getPosition(this._camRestPos);
+        //     this._controls.getTarget(this._camRestLookAt);
+        //     this._controls.getSpherical(this._camRestRot, true);
+        //     this.mousefollowState = true;
+        // });
 
         const projectDetail = document.getElementById("projectDetail");
         const projectDiv = document.getElementById("projectDiv");
@@ -472,19 +516,19 @@ export class VRHall {
                 pointer.y = - (event.clientY - (this._size.height) / 2) / (this._size.height / 2);
                 // console.log(pointer);
                 if (pointer.x > 0 && pointer.y > 0) {
-                    mousefollowX = 0.15;
+                    mousefollowX = 0.1;
                     mousefollowY = 0.2;
                 }
                 if (pointer.x < 0 && pointer.y < 0) {
-                    mousefollowX = -0.15;
+                    mousefollowX = -0.1;
                     mousefollowY = -0.2;
                 }
                 if (pointer.x > 0 && pointer.y < 0) {
-                    mousefollowX = 0.15;
+                    mousefollowX = 0.1;
                     mousefollowY = -0.2;
                 }
                 if (pointer.x < 0 && pointer.y > 0) {
-                    mousefollowX = -0.15;
+                    mousefollowX = -0.1;
                     mousefollowY = 0.2;
                 }
                 if (pointer.x >= -0.1 && pointer.x <= 0.1 && pointer.y >= -0.08 && pointer.y <= 0.08) {
@@ -910,17 +954,21 @@ export class VRHall {
         }
 
 
-        this._controls.addEventListener('rest', () => {
-            console.log("mousefollow");
-            this._controls.getPosition(this._camRestPos);
-            this._controls.getTarget(this._camRestLookAt);
-            this._controls.getSpherical(this._camRestRot, true);
-            this.mousefollowState = true;
-        });
-        this._controls.addEventListener('controlstart', () => { 
-            console.log("controlstart"); 
-            this.mousefollowState = false;
-        });
+        // this._controls.addEventListener('rest', () => {
+        //     console.log("mousefollow");
+        //     this._controls.getPosition(this._camRestPos);
+        //     this._controls.getTarget(this._camRestLookAt);
+        //     this._controls.getSpherical(this._camRestRot, true);
+        //     this.mousefollowState = true;
+        // });
+        // this._controls.addEventListener('controlstart', () => { 
+        //     console.log("controlstart"); 
+        //     this.mousefollowState = false;
+        // });
+        // this._controls.addEventListener('control', () => {
+        //     console.log("control"); 
+        //     this.mousefollowState = false;
+        // });
     }
 
     _camLookAtExhibition(target, targetRot, t){
